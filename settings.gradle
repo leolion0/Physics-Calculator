@@ -1,0 +1,2 @@
+rootProject.name='Physics Calculator'
+include ':app'
