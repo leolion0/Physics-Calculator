@@ -7,6 +7,7 @@
     tools:context=".AddEquationActivity">
 
     <LinearLayout
+        android:id="@+id/editTextLinearLayout"
         android:layout_width="398dp"
         android:layout_height="630dp"
         android:layout_marginStart="16dp"
@@ -17,30 +18,35 @@
         android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/addFactorButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="48dp"
+        android:layout_marginLeft="48dp"
         android:text="Add"
-        tools:layout_editor_absoluteX="161dp"
-        tools:layout_editor_absoluteY="667dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/deleteFactorButton" />
 
     <Button
         android:id="@+id/deleteFactorButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginLeft="36dp"
         android:text="Delete"
-        tools:layout_editor_absoluteX="37dp"
-        tools:layout_editor_absoluteY="667dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/saveEquationButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Save"
-        tools:layout_editor_absoluteX="279dp"
-        tools:layout_editor_absoluteY="665dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/addFactorButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
