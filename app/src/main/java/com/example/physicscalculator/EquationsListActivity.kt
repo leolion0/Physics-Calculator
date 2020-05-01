@@ -3,30 +3,20 @@ package com.example.physicscalculator
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_equations_list.*
 import java.io.BufferedReader
 import java.io.FileInputStream
 import java.io.InputStreamReader
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 
 import android.content.Context
 import android.content.Intent
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.android.synthetic.main.fragment_first.*
 
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.*
 import com.google.gson.Gson
 
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_main.*
 import java.io.*
-import java.lang.Exception
-import java.lang.IllegalArgumentException
-import java.security.KeyStore
 
 class EquationsListActivity : AppCompatActivity() {
 
@@ -39,44 +29,52 @@ class EquationsListActivity : AppCompatActivity() {
         listView.adapter = MyCustomAdapter(this)
 
         listView.setOnItemClickListener { parent, view, position, id ->
-            if (position == 0){
+
+
                 val intent = Intent(this, MainActivity::class.java)
+
+                intent.putExtra( "EQUATION" , (listView.adapter as MyCustomAdapter).equationsList[position])
                 startActivity(intent)
-                intent.putExtra("Eq", (listView.adapter as MyCustomAdapter).exampleEq)
         }
-
-        }
-
-
-
-
 
 
     }
     private  class MyCustomAdapter constructor(context: Context) : BaseAdapter() {
         private var context = context
-         var exampleEq: Equation
+        var equationsList: MutableList<Equation> = mutableListOf()
+        var eqIt: Iterator<Equation>
         init{
             var gson = Gson()
-            val filename = "physics.lib"
+            var fileNameList = mutableListOf<String>()
 
-            var fileInputStream: FileInputStream = context.applicationContext.openFileInput(filename)
-            var inputStreamReader: InputStreamReader = InputStreamReader(fileInputStream)
-            val bufferedReader: BufferedReader = BufferedReader(inputStreamReader)
-            val stringBuilder: StringBuilder = StringBuilder()
-            var text: String? = null
-            while ({ text = bufferedReader.readLine(); text }() != null) {
-                stringBuilder.append(text)
+
+
+            print(fileNameList)
+
+            File(context.applicationContext.filesDir.toString()).walk().forEach {
+                if(it.extension == "eq"){
+                    var fileInputStream: FileInputStream = context.applicationContext.openFileInput(it.name.toString())
+                    var inputStreamReader: InputStreamReader = InputStreamReader(fileInputStream)
+                    val bufferedReader: BufferedReader = BufferedReader(inputStreamReader)
+                    val stringBuilder: StringBuilder = StringBuilder()
+                    var text: String? = null
+                    while ({ text = bufferedReader.readLine(); text }() != null) {
+                        stringBuilder.append(text)
+                    }
+                    var inJsonString = stringBuilder.toString()
+                    this.equationsList.add(gson.fromJson(inJsonString, Equation::class.java))
+                }
             }
-            var inJsonString = stringBuilder.toString()
-            this.exampleEq = gson.fromJson(inJsonString, Equation::class.java)
+            eqIt = equationsList.listIterator().asSequence().iterator()
         }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
 
             val textView = TextView(context)
-            textView.text = exampleEq.eqName
-            return textView
+                textView.text = equationsList[position].eqName
+                return textView
+
+
         }
 
         override fun getItem(position: Int): Any {
@@ -90,16 +88,7 @@ class EquationsListActivity : AppCompatActivity() {
         }
 
         override fun getCount(): Int {
-            try{
-                return 1
-            }
-            catch(e:Exception){
-                print(e)
-            }
-            return 1
-
-
-
+            return equationsList.size
         }
 
     }

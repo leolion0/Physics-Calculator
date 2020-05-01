@@ -1,17 +1,20 @@
 package com.example.physicscalculator
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Toast
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import java.io.Serializable
 import java.lang.Exception
 import java.lang.IllegalArgumentException
+import kotlin.math.pow
 
 class MainActivity : AppCompatActivity() {
 
@@ -21,29 +24,36 @@ class MainActivity : AppCompatActivity() {
         val editLinearLayout = findViewById<LinearLayout>(R.id.editTextLinearLayout)
         setSupportActionBar(toolbar)
 
-        val intent = intent
-        val demo = intent.getSerializableExtra("Eq") as? Equation
+
+        var eq : Equation? = intent.getSerializableExtra("EQUATION") as? Equation
+
 
         val factEditTexts: MutableList<EditText> = mutableListOf()
-        val demoFactors = mutableListOf<Factor>()
-        demoFactors.add(Factor('P', 0f, true, true))
-        demoFactors.add(Factor('m', 0f, true, false))
-        demoFactors.add(Factor('g', 9.81f, true, true))
-        demoFactors.add(Factor('h', 0f, true, false ))
+        val demoFactors = mutableListOf<Oper>()
+
 
 //        val demo: Equation = Equation("Physics", "Potential Energy Gravity", demoFactors, mutableListOf<Char>('p', '=', 'm', 'g', 'h'))
-        var counter = 0
-        if (demo != null) {
-            for (i in demo.factors) {
-                factEditTexts.add(EditText(this))
-                factEditTexts[counter].hint = i.symbol.toString()
-                factEditTexts[counter].layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                factEditTexts[counter].layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
-                factEditTexts[counter].setPadding(20, 100, 20, 20)
 
+        if (eq != null) {
+            factEditTexts.add(evalDynamicEditText(eq.answer, forceDisable = true))
+            var equalsSignET = EditText(this)
+            equalsSignET.hint = "="
+            equalsSignET.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            equalsSignET.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            equalsSignET.setPadding(20, 100, 20, 20)
+            equalsSignET.isEnabled = false
+            factEditTexts.add(equalsSignET)
+            editLinearLayout?.addView(factEditTexts[0])
+            editLinearLayout?.addView(factEditTexts[1])
+
+
+            var counter = 2
+            for (i in eq.inFixOpers) {
+                factEditTexts.add(evalDynamicEditText(i))
                 editLinearLayout?.addView(factEditTexts[counter])
                 counter++
             }
+            counter = 0
         }
 
 
@@ -59,10 +69,35 @@ class MainActivity : AppCompatActivity() {
 //        editLinearLayout?.addView(editText)
 
         eval_button.setOnClickListener{
-            var one : Float =  editText.text.toString().toFloat()
-            var two : Float =  editText2.text.toString().toFloat()
-            var ans = one * 9.81F * two
-            answer_textView.text = ans.toString()
+            fun reEntryToast(msg: String, context: Context = applicationContext, len: Int = Toast.LENGTH_SHORT){
+                val toast = Toast.makeText(context, msg, len)
+                toast.show()
+            }
+            var counter = 2
+            if (eq != null) {
+                for (i in eq.inFixOpers) {
+                    try {
+                        var input = factEditTexts[counter].text.toString()
+                        input = input.replace("\\s".toRegex(), "")
+                        if (factEditTexts[counter].isEnabled == false) {
+                            counter++
+                            continue
+                        }
+                        else
+                            i.number = input.toFloat()
+                    }
+                    catch (ex:Exception){
+                        print(ex.message)
+                        reEntryToast("Only digits and decimals are allowed")
+                        return@setOnClickListener
+                    }
+                    counter++
+                }
+                    val answer = eq.eval()
+
+                    answerTextView.text = eq.eval().toString()
+
+            }
         }
         newEQButton.setOnClickListener {
             val intent = Intent(this, AddEquationActivity::class.java)
@@ -75,62 +110,196 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+    fun evalDynamicEditText( inOp : Oper, forceDisable: Boolean = false): EditText {
+        val sym = inOp
+        val temp = EditText(this)
+        if (inOp.typeOfFactor == Oper.SymbolType.VARIABLE){
+                temp.hint = inOp.symbol.toString()
+                temp.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                temp.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                temp.setPadding(20, 100, 20, 20)
+        }
+        else if (inOp.typeOfFactor == Oper.SymbolType.CONST){
+            temp.hint = inOp.symbol.toString()
+            temp.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            temp.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            temp.setPadding(20, 100, 20, 20)
+            temp.isEnabled = false
+        }
+        else if (inOp.typeOfFactor == Oper.SymbolType.OPERATOR){
+            temp.hint = inOp.symbol.toString()
+            temp.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            temp.layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            temp.setPadding(20, 100, 20, 20)
+            temp.isEnabled = false
+        }
+        if(forceDisable)
+            temp.isEnabled = false
+        return temp
+    }
+
 
 
 
 }
 
-class Factor constructor(symbol:Char, number:Float, displaySymbol: Boolean, isConst: Boolean){
 
-    val symbol: Char = symbol
-    val number: Float = number
+
+
+class Oper constructor(symbol:String, inType: SymbolType, number:Float?, displaySymbol: Boolean ): Serializable{
+
+    val symbol: String = symbol
+    var number: Float? = number
     val displaySymbol: Boolean = displaySymbol
-    val isConst: Boolean = isConst
+    val typeOfFactor: SymbolType = inType
+
+
+
+    enum class SymbolType(val inType: Int){
+        VARIABLE(1),
+        CONST(2),
+        OPERATOR(3)
+    }
 }
 
-class StackWithList{
-    val elements: MutableList<Any> = mutableListOf()
+class StackWithList<T>{
+    val elements: MutableList<T> = mutableListOf()
 
     fun isEmpty() = elements.isEmpty()
 
     fun size() = elements.size
 
-    fun push(item: Any) = elements.add(item)
+    fun push(item: T) = elements.add(item)
 
-    fun pop() : Any? {
+    fun pop() : T? {
         val item = elements.lastOrNull()
         if (!isEmpty()){
             elements.removeAt(elements.size -1)
         }
         return item
     }
-    fun peek() : Any? = elements.lastOrNull()
+    fun top() : T? = elements.lastOrNull()
 
     override fun toString(): String = elements.toString()
 }
-class Equation constructor(library: String, eqName: String, factors: MutableList<Factor>, tokenization: MutableList<Char>): Serializable{
+class Equation constructor(eqName: String, answer: Oper, opers: List<Oper>): Serializable{
 
 
-    var library: String = library
+
     var eqName : String = eqName
-    var factors = factors
-    var tokenization = tokenization
+    val answer = answer
+    var inFixOpers: List<Oper> = opers
+    var postFixOpers: List<Oper>
+   // private var inToPostMap: Map<Oper, Oper>
+
+    init{
+        postFixOpers = inFixListToPostFix(opers)
+       // inToPostMap = mapInFixToPostFix()/
+    }
+
+    private fun mapInFixToPostFix(): Map<Oper, Oper> {
+        var workMap =  mutableMapOf<Oper, Oper>()
+        for(i in inFixOpers){
+            for(p in postFixOpers)
+                if(i == p){
+                    workMap[i] = p
+                    break
+                }
+        }
+        return workMap.toMap()
+    }
+
+    fun inFixListToPostFix(s: List<Oper>): List<Oper> {
+        fun prec(oper: Oper): Int {
+            return when(oper.symbol){
+                "^" -> 3
+                "*" -> 2
+                "/" -> 2
+                "+" -> 1
+                "-" -> 1
+                else -> -1
+            }
+        }
+
+        var st = StackWithList<Oper>()
+        val endOfStack = Oper("END_OF_STACK", Oper.SymbolType.OPERATOR, null, false)
+        st.push(endOfStack);
+        var l: Int = s.size;
+        var ns = mutableListOf<Oper>()
+        for(i in  0 until l)
+        {
+            // If the scanned character is an operand, add it to output string.
+            if(s[i].typeOfFactor != Oper.SymbolType.OPERATOR )
+                ns.add(s[i]);
+
+            // If the scanned character is an ‘(‘, push it to the stack.
+            else if(s[i].symbol == "(")
+
+                st.push(s[i]);
+
+            // If the scanned character is an ‘)’, pop and to output string from the stack
+            // until an ‘(‘ is encountered.
+            else if(s[i].symbol == ")")
+            {
+                while(st.top() != endOfStack && st.top()!!.symbol != "(")
+                {
+                    val c = st.top();
+                    st.pop();
+                    if (c != null) {
+                        ns.add(c)
+                    }
+                }
+                if(st.top()!!.symbol == "(")
+                {
+                    val c = st.top();
+                    st.pop()
+                }
+            }
+
+            //If an operator is scanned
+            else{
+                while(st.top() != endOfStack && prec(s[i]) <= prec(st.top()!!))
+                {
+                    val c = st.top();
+                    st.pop();
+                    if (c != null) {
+                        ns.add(c)
+                    }
+                }
+                st.push(s[i]);
+            }
+
+        }
+        //Pop all the remaining elements from the stack
+        while(st.top() != endOfStack)
+        {
+            val c = st.top();
+            st.pop();
+            if (c != null) {
+                ns.add(c)
+            }
+        }
+        return ns
+
+    }
 
     fun eval(): Float{
-        // assume first term and equals are skipped
+        postFixOpers = inFixListToPostFix(inFixOpers)
+        val ERROR = -1F
+
         var ops = mutableListOf<Char>('*', '/', '+', '-')
-        var workStack = StackWithList()
-        var counter = 2
-        while (counter < tokenization.size){
-            var nextEl = tokenization[counter]
-            if (!(nextEl == '*' || nextEl == '/' ||nextEl == '+' ||nextEl == '-')) {
+        var workStack = StackWithList<Float>()
+        var counter = 0
+        while (counter < postFixOpers.size){
+            var nextEl =  postFixOpers[counter]
+            var nextElSymbol = postFixOpers[counter].symbol
+            if (nextEl.typeOfFactor != Oper.SymbolType.OPERATOR) {
                 try{
-                    var theFact : Factor = nextEl as Factor
-                    workStack.push(theFact.number)
+                    var theFact : Oper = nextEl
+                    theFact.number?.let { workStack.push(it) }
                 }
-                finally {
-                    throw Exception("Element in stack was not a factor")
-                    return -1F
+                catch(ex:Exception){
+                    throw ex
                 }
 
             }
@@ -139,14 +308,15 @@ class Equation constructor(library: String, eqName: String, factors: MutableList
                 var b = workStack.pop()
                 if (a !is Float || b !is Float){
                     throw Exception("A or B is not a float")
-                    return -1F
+                    return ERROR
                 }
                 var value = 0F
-                when (nextEl) {
-                    '*' -> value = b * a
-                    '/' -> value = b / a
-                    '+' -> value = b + a
-                    '-' -> value = b - a
+                when (nextElSymbol) {
+                    "*" -> value = b * a
+                    "/" -> value = b / a
+                    "+" -> value = b + a
+                    "-" -> value = b - a
+                    "^" -> value = b.pow(a)
                     else -> throw IllegalArgumentException()
                 }
                 workStack.push(value)
@@ -159,10 +329,16 @@ class Equation constructor(library: String, eqName: String, factors: MutableList
         }
         else{
             throw Exception("Final answer not float")
-            return -1F
+            return ERROR
         }
     }
+
+
 }
+
+
+
+
 
 
 

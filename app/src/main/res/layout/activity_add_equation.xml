@@ -6,13 +6,23 @@
     android:layout_height="match_parent"
     tools:context=".AddEquationActivity">
 
+    <EditText
+        android:id="@+id/eqNameEditText"
+        android:layout_width="394dp"
+        android:layout_height="41dp"
+        android:layout_marginTop="12dp"
+        android:hint="Equation Name"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <LinearLayout
         android:id="@+id/editTextLinearLayout"
-        android:layout_width="398dp"
-        android:layout_height="630dp"
+        android:layout_width="395dp"
+        android:layout_height="575dp"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="60dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
         android:orientation="vertical"
